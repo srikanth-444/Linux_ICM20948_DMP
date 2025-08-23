@@ -1,15 +1,18 @@
-#include "PI-ICM20948.h"
+#include "Pi-ICM20948.h"
 #include <iostream>
+#include <chrono>
+#include <thread>
 #include <fcntl.h>      // open()
 #include <unistd.h>     // close()
 #include <sys/ioctl.h>  // ioctl()
 #include <linux/spi/spidev.h> // SPI-specific definitions
 #include <cstring>      // memset
+#include <cmath>
 
 #define SPI_DEVICE "/dev/spidev0.0"  // Change based on your SPI device
-#define SPI_MODE SPI_MODE_0          // SPI mode (MODE_0, MODE_1, MODE_2, MODE_3)
-#define SPI_BITS_PER_WORD 8          // 8 bits per word
-#define SPI_SPEED 500000             // SPI speed in Hz (500 kHz)
+
+
+            // SPI speed in Hz (500 kHz)
 
 
 
@@ -21,7 +24,13 @@
 
 
 
-int spi_fd
+
+
+
+int spi_fd;
+int SPI_MODE= SPI_MODE_0;
+int SPI_BITS_PER_WORD=8 ;
+int SPI_SPEED=7000000; 
 float gyro[3];
 bool gyro_data_ready = false;
 
@@ -55,7 +64,7 @@ bool har_data_ready = false;
 unsigned long steps;
 bool steps_data_ready = false;
 
-
+extern CircularBuffer cb;
 
 
 
@@ -153,7 +162,7 @@ static const uint8_t dmp3_image[] = {
 void check_rc(int rc, const char * msg_context)
 {
   if (rc < 0) {
-    Serial.println("ICM20948 ERROR!");
+    std::cout<<"ICM20948 ERROR!"<<std::endl;
     while (1);
   }
 }
@@ -167,17 +176,18 @@ int load_dmp3(void)
 
 void inv_icm20948_sleep_us(int us)
 {
-  delayMicroseconds(us);
+  std::this_thread::sleep_for(std::chrono::microseconds(us));
 }
 
 void inv_icm20948_sleep(int ms)
 {
-  delay(ms);
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
 uint64_t inv_icm20948_get_time_us(void)
 {
-  return micros();
+
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 bool initiliaze_SPI(void)
 {
@@ -215,14 +225,14 @@ void set_comm_interface(PIICM20948Settings settings)
     is_interface_SPI = settings.is_SPI;
     if (is_interface_SPI)
     {
-        com_speed = settings.spi_speed;
+        int com_speed = settings.spi_speed;
         if(!initiliaze_SPI()){
-            exit()
+            exit(1);
         }
     }
     else
     {
-        com_speed = settings.i2c_speed;
+        int com_speed = settings.i2c_speed;
         //initiliaze_I2C();
     }
 
@@ -239,6 +249,7 @@ int idd_io_hal_read_reg(void *context, uint8_t reg, uint8_t *rbuffer, uint32_t r
     {
         return spi_master_read_register(spi_fd,reg,rbuffer,rlen);
     }
+    return -1;
 }
 
 //---------------------------------------------------------------------
@@ -247,8 +258,9 @@ int idd_io_hal_write_reg(void *context, uint8_t reg, const uint8_t *wbuffer, uin
 {
     if (interface_is_SPI())
     {
-        return spi_master_write_register(spi_fd, reg, wbuffer, wlen)
+        return spi_master_write_register(spi_fd, reg, wbuffer, wlen);
     }
+    return -1;
 }
 
 static void icm20948_apply_mounting_matrix(void)
@@ -274,11 +286,15 @@ int icm20948_sensor_setup(void)
 
   int rc;
   uint8_t i, whoami = 0xff;
-
+  // std::cout<<"inside sensor setup before reset initializing address inside the fuction "<<cb<<" rows "<<cb->rows<<" row size "<<cb->row_size<<std::endl;
   inv_icm20948_soft_reset(&icm_device);
-
+  
   // Get whoami number
+  // std::cout<<"inside sensor setup after reset initializing address inside the fuction "<<cb<<" rows "<<cb->rows<<" row size "<<cb->row_size<<std::endl;
   rc = inv_icm20948_get_whoami(&icm_device, &whoami);
+  // std::cout<<"inside sensor setup after rc initializing address inside the fuction "<<cb<<" rows "<<cb->rows<<" row size "<<cb->row_size<<std::endl;
+  // std::cout<<"who am i = 0x"<<std::hex<<(int)whoami<<std::endl;
+  // std::cout<<"inside sensor setup after rc initializing address inside the fuction "<<cb<<" rows "<<cb->rows<<" row size "<<cb->row_size<<std::endl;
 
   // Check if WHOAMI value corresponds to any value from EXPECTED_WHOAMI array
   for (i = 0; i < sizeof(EXPECTED_WHOAMI) / sizeof(EXPECTED_WHOAMI[0]); ++i) {
@@ -289,8 +305,7 @@ int icm20948_sensor_setup(void)
   }
 
   if (i == sizeof(EXPECTED_WHOAMI) / sizeof(EXPECTED_WHOAMI[0])) {
-    Serial.print("Bad WHOAMI value = 0x");
-    Serial.println(whoami, HEX);
+    std::cout<<"Bad WHOAMI value = 0x"<<std::hex<<whoami<<std::endl;
     return rc;
   }
 
@@ -300,7 +315,7 @@ int icm20948_sensor_setup(void)
   // set default power mode
   rc = inv_icm20948_initialize(&icm_device, dmp3_image, sizeof(dmp3_image));
   if (rc != 0) {
-    Serial.println("Icm20948 Initialization failed.");
+    std::cout<<"Icm20948 Initialization failed."<<std::endl;
     return rc;
   }
 
@@ -310,7 +325,7 @@ int icm20948_sensor_setup(void)
   inv_icm20948_register_aux_compass( &icm_device, INV_ICM20948_COMPASS_ID_AK09916, AK0991x_DEFAULT_I2C_ADDR);
   rc = inv_icm20948_initialize_auxiliary(&icm_device);
   if (rc == -1) {
-    Serial.println("Compass not detected...");
+    std::cout<<"Compass not detected..."<<std::endl;
   }
 
   icm20948_apply_mounting_matrix();
@@ -356,10 +371,44 @@ static uint8_t convert_to_generic_ids[INV_ICM20948_SENSOR_MAX] = {
   INV_SENSOR_TYPE_B2S
 };
 
+// struct circularbuffer{
+//   float buffer[size];
+//   int head;
+//   int tail;
+//   int count;
+// }cb;
+void test_circular_buffer() {
+    CircularBuffer buff;
+    CircularBuffer* cb=&buff;
+    init_buffer(cb, 5, sizeof(float[4])); // 5 rows, each row = float[4]
+
+    printf("Initialized buffer: rows=%u, row_size=%u, head=%u, tail=%u\n",
+           cb->rows, cb->row_size, cb->head, cb->tail);
+
+    // Put some rows
+    for (int i = 0; i < 5; i++) {
+        float data[4] = {i*1.0, i*2.0, i*3.0, i*4.0};
+        put_data(cb, data);
+        printf("After put %d: head=%u, tail=%u, data={%.1f, %.1f, %.1f, %.1f}\n",
+               i, cb->head, cb->tail, data[0], data[1], data[2], data[3]);
+    }
+
+    // Pull all rows
+    for (int i = 0; i < 5; i++) {
+        float out[4];
+        pull_data(cb, out);
+        printf("After pull %d: head=%u, tail=%u, data={%.1f, %.1f, %.1f, %.1f}\n",
+               i, cb->head, cb->tail, out[0], out[1], out[2], out[3]);
+    }
+
+    free_buffer(cb);
+    printf("Buffer freed.\n");
+}
 void build_sensor_event_data(void * context, enum inv_icm20948_sensor sensortype, uint64_t timestamp, const void * data, const void *arg)
 {
   float raw_bias_data[6];
   inv_sensor_event_t event;
+  
   (void)context;
   uint8_t sensor_id = convert_to_generic_ids[sensortype];
 
@@ -446,14 +495,29 @@ void build_sensor_event_data(void * context, enum inv_icm20948_sensor sensortype
       euler9_data_ready = true;
       break;
     case INV_SENSOR_TYPE_GAME_ROTATION_VECTOR:
+      
+      
+      
+      
       memcpy(event.data.quaternion6DOF.quat, data, sizeof(event.data.quaternion6DOF.quat));
       event.data.quaternion6DOF.accuracy_flag = icm20948_get_grv_accuracy();
 
-      // WE WANT THIS
-      quat6[0] = event.data.quaternion6DOF.quat[0];
-      quat6[1] = event.data.quaternion6DOF.quat[1];
-      quat6[2] = event.data.quaternion6DOF.quat[2];
-      quat6[3] = event.data.quaternion6DOF.quat[3];
+      try {
+            
+            put_data(&cb, &event);
+          } catch (const std::exception &e) {
+              std::cerr << "Exception: " << e.what() << std::endl;
+          } catch (...) {
+              std::cerr << "Unknown exception" << std::endl;
+          }
+
+      // // WE WANT THIS
+      // quat6[0] = event.data.quaternion6DOF.quat[0];
+      // quat6[1] = event.data.quaternion6DOF.quat[1];
+      // quat6[2] = event.data.quaternion6DOF.quat[2];
+      // quat6[3] = event.data.quaternion6DOF.quat[3];
+
+
       quat6_data_ready = true;
       euler6_data_ready = true;
       break;
@@ -552,10 +616,14 @@ PIICM20948::PIICM20948()
 }
 
 void PIICM20948::init(PIICM20948Settings settings)
-{
-  spi_fd=set_comm_interface(settings);
-  Serial.println("Initializing ICM-20948...");
+{ 
 
+
+  // std::cout<<"address inside the fuction "<<settings.cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
+  set_comm_interface(settings);
+  // std::cout<<"Initializing ICM-20948..."<<std::endl;
+  
+  // std::cout<<"after icm initializing address inside the fuction "<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
   // Initialize icm20948 serif structure
   struct inv_icm20948_serif icm20948_serif;
   icm20948_serif.context   = 0; // no need
@@ -564,13 +632,17 @@ void PIICM20948::init(PIICM20948Settings settings)
   icm20948_serif.max_read  = 1024 * 16; // maximum number of bytes allowed per serial read
   icm20948_serif.max_write = 1024 * 16; // maximum number of bytes allowed per serial write
   icm20948_serif.is_spi = interface_is_SPI();
-
+ 
+  // std::cout<<"before reset initializing address inside the fuction "<<settings.cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
   // Reset icm20948 driver states
   inv_icm20948_reset_states(&icm_device, &icm20948_serif);
   inv_icm20948_register_aux_compass(&icm_device, INV_ICM20948_COMPASS_ID_AK09916, AK0991x_DEFAULT_I2C_ADDR);
-
+  
+  // std::cout<<"befor setup initializing address inside the fuction "<<settings.cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
   // Setup the icm20948 device
   rc = icm20948_sensor_setup();
+ 
+  // std::cout<<"after setup initializing address inside the fuction "<<settings.cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
 
   if (icm_device.selftest_done && !icm_device.offset_done)
   {
@@ -586,7 +658,8 @@ void PIICM20948::init(PIICM20948Settings settings)
 
   // Set mode
   inv_icm20948_set_lowpower_or_highperformance(&icm_device, settings.mode);
-
+  
+  // std::cout<<"after setting mode initializing address inside the fuction "<<settings.cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
   // Set frequency
   rc = inv_icm20948_set_sensor_period(&icm_device, idd_sensortype_conversion(INV_SENSOR_TYPE_GYROSCOPE), 1000 / settings.gyroscope_frequency);
   rc = inv_icm20948_set_sensor_period(&icm_device, idd_sensortype_conversion(INV_SENSOR_TYPE_ACCELEROMETER), 1000 / settings.accelerometer_frequency);
@@ -610,6 +683,11 @@ void PIICM20948::init(PIICM20948Settings settings)
   rc = inv_icm20948_enable_sensor(&icm_device, idd_sensortype_conversion(INV_SENSOR_TYPE_LINEAR_ACCELERATION), settings.enable_linearAcceleration);
   rc = inv_icm20948_enable_sensor(&icm_device, idd_sensortype_conversion(INV_SENSOR_TYPE_BAC), settings.enable_har);
   rc = inv_icm20948_enable_sensor(&icm_device, idd_sensortype_conversion(INV_SENSOR_TYPE_STEP_COUNTER), settings.enable_steps);
+
+  
+  
+  // std::cout<<"address inside the fuction "<<cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
+
 }
 
 

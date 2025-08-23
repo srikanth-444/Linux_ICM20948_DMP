@@ -1,6 +1,7 @@
 #ifndef __PI_ICM20948_H__
 #define __PI_ICM20948_H__
 
+#include "CircularBuffer.h"
 /*************************************************************************
   Defines
 *************************************************************************/
@@ -29,8 +30,14 @@ typedef struct {
   int har_frequency;
   int steps_frequency;
 
-} PIICM20948Settings;
 
+} PIICM20948Settings;
+typedef struct{
+  struct {
+    float quat[4];
+    uint64_t timestamp;
+  }quaternion6;
+}PIICM20948data;
 /*************************************************************************
   Class
 *************************************************************************/

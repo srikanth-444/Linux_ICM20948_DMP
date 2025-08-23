@@ -1,14 +1,20 @@
-#include "PI-ICM20948.h"
+#include "Pi-ICM20948.h"
 #include <iostream>
+#include "CircularBuffer.h"
+#include "SensorTypes.h"
 
 
+
+CircularBuffer cb;
+
+inv_sensor_event_t event;
 
 PIICM20948 icm20948;
 PIICM20948Settings icmSettings =
 {
   .i2c_speed = 400000,                // i2c clock speed
-  .is_SPI = false,                    // Enable SPI, if disable use i2c
-  .spi_speed = 7000000,               // SPI clock speed in Hz, max speed is 7MHz
+  .is_SPI = true,                    // Enable SPI, if disable use i2c
+  .spi_speed = 100000,               // SPI clock speed in Hz, max speed is 7MHz
   .mode = 1,                          // 0 = low power mode, 1 = high performance mode
   .enable_gyroscope = true,           // Enables gyroscope output
   .enable_accelerometer = true,       // Enables accelerometer output
@@ -27,7 +33,8 @@ PIICM20948Settings icmSettings =
   .quaternion6_frequency = 50,        // Max frequency = 225, min frequency = 50
   .quaternion9_frequency = 50,        // Max frequency = 225, min frequency = 50
   .har_frequency = 50,                // Max frequency = 225, min frequency = 50
-  .steps_frequency = 50               // Max frequency = 225, min frequency = 50
+  .steps_frequency = 50,               // Max frequency = 225, min frequency = 50
+  
   
 };
 
@@ -48,8 +55,7 @@ void run_icm20948_quat6_controller(bool inEuler = false)
         if (icm20948.euler6DataIsReady())
         {
             icm20948.readEuler6Data(&roll, &pitch, &yaw);
-            std::cout<<sensor_string_buff, "Euler6 roll, pitch, yaw(deg): [%f,%f,%f]", roll, pitch, yaw;
-            std::cout<<sensor_string_buff;
+            std::cout << "Euler6 roll, pitch, yaw (deg): ["<< roll << ", " << pitch << ", " << yaw << "]" << std::endl;
         }
     }
     else
@@ -57,8 +63,7 @@ void run_icm20948_quat6_controller(bool inEuler = false)
         if (icm20948.quat6DataIsReady())
         {
             icm20948.readQuat6Data(&quat_w, &quat_x, &quat_y, &quat_z);
-            std::cout<<sensor_string_buff, "Quat6 w, x, y, z (deg): [%f,%f,%f,%f]", quat_w, quat_x, quat_y, quat_z;
-            std::cout<<sensor_string_buff;
+            std::cout<< "Quat6 w, x, y, z (deg): ["<<quat_w<<","<< quat_x <<","<<quat_y<<","<<quat_z<<"]"<<std::endl;
         }
     }
     
@@ -73,8 +78,9 @@ void run_icm20948_quat9_controller(bool inEuler = false)
         if (icm20948.euler9DataIsReady())
         {
             icm20948.readEuler9Data(&roll, &pitch, &yaw);
-            std::cout<<sensor_string_buff, "Euler9 roll, pitch, yaw(deg): [%f,%f,%f]", roll, pitch, yaw;
-            std::cout<<sensor_string_buff;
+            std::cout << "Euler9 roll, pitch, yaw (deg): ["<< roll << ", " << pitch << ", " << yaw << "]" << std::endl;
+
+          
         }
     }
     else
@@ -82,8 +88,8 @@ void run_icm20948_quat9_controller(bool inEuler = false)
         if (icm20948.quat9DataIsReady())
         {
             icm20948.readQuat9Data(&quat_w, &quat_x, &quat_y, &quat_z);
-            std::cout<<sensor_string_buff, "Quat9 w, x, y, z (deg): [%f,%f,%f,%f]", quat_w, quat_x, quat_y, quat_z;
-            std::cout<<sensor_string_buff;
+            std::cout<< "Quat9 w, x, y, z (deg): ["<<quat_w<< ","<<quat_w<<","<< quat_x <<","<<quat_y<<","<<quat_z<<"]"<<std::endl;
+            
         }
     }
     
@@ -173,9 +179,25 @@ void run_icm20948_steps_controller()
     
 }
 
+
+
 int main(){
+    
+    init_buffer(&cb, 20, sizeof(event));
     icm20948.init(icmSettings);
-    icm20948.task();
-    run_icm20948_quat9_controller(true);
+
+    while(true){
+
+        icm20948.task();
+       
+        if(!check_empty(&cb)){
+            pull_data(&cb,&event); 
+            std::cout<<event.data.quaternion6DOF.quat[0]<<","<<event.data.quaternion6DOF.quat[1]<<","<<event.data.quaternion6DOF.quat[2]<<","<<event.data.quaternion6DOF.quat[3]<<","<<std::endl;
+            std::cout<<event.timestamp<<std::endl;
+        }
+        
+        
+    }
+    exit(0);
 }
 
