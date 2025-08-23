@@ -1,0 +1,3 @@
+/home/raspi/spi/PI_ICM20948_DMP_Full-Function/ICM20948/build/CMakeFiles/PI_icm20948.dir
+/home/raspi/spi/PI_ICM20948_DMP_Full-Function/ICM20948/build/CMakeFiles/edit_cache.dir
+/home/raspi/spi/PI_ICM20948_DMP_Full-Function/ICM20948/build/CMakeFiles/rebuild_cache.dir
