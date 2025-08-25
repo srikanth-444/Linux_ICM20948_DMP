@@ -13,7 +13,17 @@ Thanks to the contributor of the original library https://github.com/ZaneL/Teens
 * Provides Linear Accel, Gravity Vector, 6&9DoF Quaternion and Euler, Activity Recognition and Step Counter
 * Provides a circular buffer to maximize sample retention and minimize data loss during high-frequency sampling
 * The sensor is implemented as an Object by using the PIICM20948 class (Check example)
-
+## Building Library
+Clone repository
+```
+```
+open terminal in folder
+```
+cd ICM20948
+mkdir build
+cmake ..
+cmake --build .
+```
 ## Setup
 
 Initialize the icm20948 Object, Circular Buffer and inv_sensor_event_t object
