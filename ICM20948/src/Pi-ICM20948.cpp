@@ -621,7 +621,7 @@ void PIICM20948::init(PIICM20948Settings settings)
 
   // std::cout<<"address inside the fuction "<<settings.cb<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
   set_comm_interface(settings);
-  // std::cout<<"Initializing ICM-20948..."<<std::endl;
+  std::cout<<"Initializing ICM-20948..."<<std::endl;
   
   // std::cout<<"after icm initializing address inside the fuction "<<" rows "<<settings.cb->rows<<" row size "<<settings.cb->row_size<<std::endl;
   // Initialize icm20948 serif structure
