@@ -16,6 +16,7 @@ Thanks to the contributor of the original library https://github.com/ZaneL/Teens
 ## Building Library
 Clone repository
 ```
+git clone git@github.com:srikanth-444/Linux_ICM20948_DMP.git
 ```
 open terminal in folder
 ```
@@ -23,6 +24,13 @@ cd ICM20948
 mkdir build
 cmake ..
 cmake --build .
+
+```
+export library to include as library
+```
+cd ..
+export LD_LIBRARY_PATH=$(pwd)/build:$LD_LIBRARY_PATH
+
 ```
 ## Setup
 
