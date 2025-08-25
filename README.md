@@ -2,7 +2,7 @@ Linux ICM20948 DMP library
 ======================
 This repository contains a modified version of the ICM20948 library with Circular Buffer implementation. It also includes an example project for running the ICM-20948 with raspberry pi or other linux distros that support userspace spi setup.
 
-Thanks to the contributor of the original library https://github.com/ZaneL/Teensy-ICM-20948
+Thanks to the contributor of the original library https://github.com/ZaneL/Teensy-ICM-20948 and https://github.com/isouriadakis/Arduino_ICM20948_DMP_Full-Function
 
 ## Functionality
 
