@@ -22,6 +22,10 @@ open terminal in folder
 ```
 cd ICM20948
 mkdir build
+cd build
+```
+build packages
+```
 cmake ..
 cmake --build .
 
