@@ -47,7 +47,7 @@ inv_sensor_event_t event;
 
 Initialize the icm20948 Settings
 ```
-ArduinoICM20948Settings icmSettings =
+PIICM20948Setting icmSettings =
 {
   .i2c_speed = 400000,                // i2c clock speed
   .is_SPI = false,                    // Enable SPI, if disable use i2c
